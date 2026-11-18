@@ -68,7 +68,9 @@ def main():
     caches = ['app/.dart_tool/package_config.json', 'app/.dart_tool/package_graph.json']
     shared = prepared / 'app/.dart_tool/hooks_runner/shared'
     if shared.is_dir():
-        caches += [str(path.relative_to(prepared)) for path in shared.rglob('*') if path.is_file()]
+        # Hook .lock files are rewritten by every flutter test run; they are not inputs.
+        caches += [str(path.relative_to(prepared)) for path in shared.rglob('*')
+                   if path.is_file() and path.name != '.lock']
     for relative in caches:
         target = private / relative
         target.parent.mkdir(parents=True, exist_ok=True)
