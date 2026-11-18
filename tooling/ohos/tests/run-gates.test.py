@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise the gate runner with real children, including deceptive exit-zero skips."""
 import argparse
+import ast
 import importlib.util
 import json
 import os
@@ -16,6 +17,73 @@ ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('gates', ROOT / 'tooling/ohos/run-gates.py')
 gates = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gates)
+
+
+def flutter_registration_for(entry, command, *, name=None):
+    """Read this runner's actual registration; do not reproduce its argv here."""
+    tree = ast.parse((ROOT / 'tooling/ohos/run-gates.py').read_text())
+    matches = []
+    for call in ast.walk(tree):
+        if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
+                and isinstance(call.func.value, ast.Name) and call.func.value.id == 'g'
+                and call.func.attr == 'run' and len(call.args) >= 2
+                and isinstance(call.args[0], ast.Constant) and isinstance(call.args[1], ast.Lambda)):
+            continue
+        invocation = call.args[1].body
+        if not (isinstance(invocation, ast.Call) and isinstance(invocation.func, ast.Attribute)
+                and invocation.func.attr == 'flutter'
+                and all(isinstance(arg, ast.Constant) for arg in invocation.args)):
+            continue
+        argv = [arg.value for arg in invocation.args]
+        if not argv or argv[0] != command or entry not in argv:
+            continue
+        if name is not None and call.args[0].value != name:
+            continue
+        declared = next(item.value for item in call.keywords if item.arg == 'tests')
+        tests = eval(compile(ast.Expression(declared), '<actual-gate-tests>', 'eval'),
+                     {'rt': 'runtime/tests/ohos/'})
+        matches.append({'name': call.args[0].value, 'argv': argv, 'tests': tests})
+    if len(matches) != 1:
+        raise AssertionError(f'Expected one {command} registration for {entry}, got {len(matches)}')
+    return matches[0]
+
+
+class FlutterRegistrationContract(unittest.TestCase):
+    def test_direct_companion_names_are_unique_and_do_not_match_native_wrappers(self):
+        rows = [flutter_registration_for('../runtime/tests/ohos/system-tts-preview-data_test.dart', 'test'),
+                flutter_registration_for('lib/companion/companion_voice.dart', 'analyze')]
+        self.assertEqual([row['name'] for row in rows],
+                         ['companion-tts-preview-dart', 'companion-tts-preview-dart-analyze'])
+        for row in rows:
+            self.assertFalse([pattern for pattern in gates.WRAPPED_TEST_LOGS
+                              if gates.fnmatch.fnmatchcase(row['name'], pattern)])
+        tree = ast.parse((ROOT / 'tooling/ohos/run-gates.py').read_text())
+        registered = [node.args[0].value for node in ast.walk(tree)
+                      if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                      and node.func.attr == 'run' and node.args
+                      and isinstance(node.args[0], ast.Constant)]
+        for row in rows:
+            self.assertEqual(registered.count(row['name']), 1)
+        self.assertNotIn('system-tts-preview-dart', registered)
+        self.assertNotIn('system-tts-preview-dart-analyze', registered)
+
+    def test_three_analyzers_keep_app_scope_and_external_test_registration(self):
+        cases = [
+            ('lib/companion/companion_voice.dart', None,
+             ['companion-external-data_test.dart', 'system-tts-preview-data_test.dart']),
+            ('lib/media/video.dart', 'flutter-media-video-poster-analyze', ['media-video-poster-data_test.dart']),
+            ('lib/diagnostics/automatic_diagnostics.dart', 'flutter-diagnostic-cancel-state-analyze',
+             ['automatic-diagnostics-cancel-state_test.dart']),
+        ]
+        for product, name, external in cases:
+            with self.subTest(product=product):
+                row = flutter_registration_for(product, 'analyze', name=name)
+                self.assertEqual(row['argv'], ['analyze', '--no-pub', product])
+                self.assertIn('app/' + product, row['tests'])
+                for name in external:
+                    self.assertIn('runtime/tests/ohos/' + name, row['tests'])
+                    executed = flutter_registration_for('../runtime/tests/ohos/' + name, 'test')
+                    self.assertIn('runtime/tests/ohos/' + name, executed['tests'])
 
 
 class SourceInventoryContract(unittest.TestCase):
@@ -241,6 +309,24 @@ class RunnerContract(unittest.TestCase):
                 "raise SystemExit(r.returncode)")
         self.assertFalse(self.g.run('git-client-marker', [sys.executable, '-c', code]))
         self.assertEqual(self.g.results['git-client-marker'], 'INCOMPLETE')
+
+    def test_companion_direct_group_does_not_require_a_native_wrapper_log(self):
+        row = flutter_registration_for('../runtime/tests/ohos/system-tts-preview-data_test.dart', 'test')
+        # A real child exercises Gates.run's file contract. These synthetic
+        # reporter fields are not a Flutter or companion product execution.
+        code = "import json; print(json.dumps({'type':'done','success':True}))"
+        self.assertTrue(self.g.run(row['name'], [sys.executable, '-c', code]))
+        self.assertEqual(self.g.rows[-1]['wrappedTestLogs'], [])
+        self.assertEqual(self.g.rows[-1]['exitCode'], 0)
+
+    def test_native_system_tts_still_requires_its_actual_wrapper_log(self):
+        self.assertEqual(gates.WRAPPED_TEST_LOGS['system-tts-*'], ['{name}/test.log'])
+        code = "print('native-wrapper-child-exited-zero')"
+        self.assertFalse(self.g.run('system-tts-plain', [sys.executable, '-c', code]))
+        self.assertEqual((self.g.out / 'groups/system-tts-plain/stdout.log').read_text(),
+                         'native-wrapper-child-exited-zero\n')
+        self.assertIn('FileNotFoundError', self.g.rows[-1]['error'])
+        self.assertEqual(self.g.results['system-tts-plain'], 'FAIL')
 
     def test_inherited_source_override_cannot_replace_private_candidate(self):
         candidate = gates.REPOSITORY / 'candidate.ets'

@@ -16,6 +16,7 @@
 // [voice] makes a fresh [SpeechOut] for each reply.
 
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 
@@ -410,9 +411,21 @@ class VoiceCallController extends ChangeNotifier {
     final hushed = mine == _hushed;
     _replyDone = hushed;
     final hint = _spokenHint;
-    final cut = _cutAt;
+    var cut = _cutAt;
     _cutAt = null;
-    final note = cut == null ? null : cutNote?.call(cut.length > 30 ? '…${cut.substring(cut.length - 30)}' : cut);
+    if (cut != null && cut.length > 30) {
+      var start = cut.length - 30;
+      // OH keeps the 30-unit suffix budget without starting inside an input pair.
+      if (Platform.operatingSystem == 'ohos') {
+        final before = cut.codeUnitAt(start - 1);
+        final after = cut.codeUnitAt(start);
+        if (before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff) {
+          start++;
+        }
+      }
+      cut = '…${cut.substring(start)}';
+    }
+    final note = cut == null ? null : cutNote?.call(cut);
     final message = [if (!_hinted && hint != null) hint, ?note, _heard].join('\n');
     _hinted = true;
     _cued = false;

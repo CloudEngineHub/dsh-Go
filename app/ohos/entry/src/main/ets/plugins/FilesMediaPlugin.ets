@@ -386,6 +386,9 @@ export default class FilesMediaPlugin implements FlutterPlugin, AbilityAware {
     try {
       const input = await this.openLocal(source, generation);
       try {
+        const size: number = (await fs.stat(input)).size;
+        this.active(generation);
+        if (size === 0) throw new FileChannelError('invalid', '视频文件为空，无法保存到相册。');
         helper = photoAccessHelper.getPhotoAccessHelper(context);
         const uris = await helper.showAssetsCreationDialog([fileUri.getUriFromPath(source)],
           [{ title: name.substring(0, dot), fileNameExtension: extension, photoType: photoAccessHelper.PhotoType.VIDEO }]);

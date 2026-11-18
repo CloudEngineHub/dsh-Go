@@ -5,6 +5,7 @@
 // `fileReferences/list` (the `@` completion's index).
 
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:dsh_client/dsh_client.dart';
@@ -359,6 +360,7 @@ class WorkspaceDirController extends Notifier<WorkspaceDir> {
   }
 
   Future<void> _list() async {
+    if (Platform.operatingSystem == 'ohos' && !ref.mounted) return;
     final source = _source;
     if (source == null) return;
     final generation = _generation;

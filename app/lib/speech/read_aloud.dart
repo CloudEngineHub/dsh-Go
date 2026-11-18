@@ -10,6 +10,7 @@ import '../companion/companion_voice.dart';
 import '../companion/companion_voice_source.dart';
 import 'deepseek_speech.dart';
 import 'speech_audio.dart';
+import 'speech_compat.dart';
 import 'speech_out.dart';
 import 'speech_settings.dart';
 
@@ -22,7 +23,8 @@ class ReadAloudState {
   final String? id;
   final ReadAloudPhase phase;
 
-  ReadAloudPhase phaseOf(String messageId) => messageId == id ? phase : ReadAloudPhase.idle;
+  ReadAloudPhase phaseOf(String messageId) =>
+      messageId == id ? phase : ReadAloudPhase.idle;
 }
 
 class ReadAloudController extends Notifier<ReadAloudState> {
@@ -43,7 +45,11 @@ class ReadAloudController extends Notifier<ReadAloudState> {
 
   /// Reads [markdown] (the reply [messageId]) aloud, or stops it when it is
   /// the one being read. [onError] hears why it could not.
-  Future<void> toggle(String messageId, String markdown, {void Function(Object error)? onError}) async {
+  Future<void> toggle(
+    String messageId,
+    String markdown, {
+    void Function(Object error)? onError,
+  }) async {
     final reading = state.id;
     stop();
     if (reading == messageId) return;
@@ -56,38 +62,71 @@ class ReadAloudController extends Notifier<ReadAloudState> {
     state = ReadAloudState(id: messageId, phase: ReadAloudPhase.loading);
     final run = ++_run;
     // The chosen voice, once the settings have been read (never a guess).
-    final settings = await ref.read(speechVoiceSettingsProvider.notifier).ready();
+    final settings = await ref
+        .read(speechVoiceSettingsProvider.notifier)
+        .ready();
     if (run != _run || !ref.mounted) return;
     final speaker = ref.read(speechSpeakerProvider);
-    if (settings.source != CompanionVoiceSource.deepseek && !await speaker.ready(settings)) {
-      if (run != _run || !ref.mounted) return;
-      state = const ReadAloudState();
+    SpeechOut createOut() {
+      // Creating this OH DeepSeek output retires only an older system preview
+      // still awaiting ready; it does not send a native stop.
+      if (speaker is OhosSpeechSpeaker && settings.usesDeepSeekSpeech) {
+        speaker.retirePendingSystemPreview();
+      }
+      final out = speechOutFor(
+        settings,
+        deepseek: ref.read(deepSeekSpeechProvider),
+        audio: ref.read(speechAudioProvider),
+        speaker: speaker,
+        gap: ref.read(deepSeekSpeechGapProvider),
+      );
+      _out = out;
+      _sub = out.events.listen((event) {
+        if (!identical(_out, out)) return;
+        switch (event) {
+          case SpeechOutStarted():
+            state = ReadAloudState(
+              id: messageId,
+              phase: ReadAloudPhase.playing,
+            );
+          case SpeechOutDone():
+            _clear(out);
+          case SpeechOutFailed(:final error):
+            _clear(out);
+            onError?.call(error);
+          case SpeechOutLevel():
+            break;
+        }
+      });
+      return out;
+    }
+
+    // An explicit OH system request owns preparation too. A later preview
+    // can retire this empty output while ready is still awaiting its reply.
+    final prepared =
+        speaker is OhosSpeechSpeaker &&
+            settings.source == CompanionVoiceSource.system &&
+            !settings.usesDeepSeekSpeech
+        ? createOut()
+        : null;
+    final ready =
+        settings.source == CompanionVoiceSource.deepseek ||
+        await speaker.ready(settings);
+    if (run != _run || !ref.mounted) return;
+    if (prepared != null && (!identical(_out, prepared) || prepared.ended)) {
+      return;
+    }
+    if (!ready) {
+      if (prepared != null) {
+        _clear(prepared);
+        prepared.stop();
+      } else {
+        state = const ReadAloudState();
+      }
       onError?.call(const ReadAloudNotSetUp());
       return;
     }
-    if (run != _run || !ref.mounted) return;
-    final out = speechOutFor(
-      settings,
-      deepseek: ref.read(deepSeekSpeechProvider),
-      audio: ref.read(speechAudioProvider),
-      speaker: speaker,
-      gap: ref.read(deepSeekSpeechGapProvider),
-    );
-    _out = out;
-    _sub = out.events.listen((event) {
-      if (!identical(_out, out)) return;
-      switch (event) {
-        case SpeechOutStarted():
-          state = ReadAloudState(id: messageId, phase: ReadAloudPhase.playing);
-        case SpeechOutDone():
-          _clear(out);
-        case SpeechOutFailed(:final error):
-          _clear(out);
-          onError?.call(error);
-        case SpeechOutLevel():
-          break;
-      }
-    });
+    final out = prepared ?? createOut();
     out
       ..add(text)
       ..finish();
@@ -126,4 +165,6 @@ class ReadAloudNotSetUp implements Exception {
   const ReadAloudNotSetUp();
 }
 
-final readAloudProvider = NotifierProvider<ReadAloudController, ReadAloudState>(ReadAloudController.new);
+final readAloudProvider = NotifierProvider<ReadAloudController, ReadAloudState>(
+  ReadAloudController.new,
+);

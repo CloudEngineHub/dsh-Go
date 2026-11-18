@@ -18,6 +18,7 @@ class OhosSpeechSpeaker implements CompanionSpeaker {
   bool get systemCall => _systemCall;
   Object? get systemOutput => _systemOut ?? _result;
   String? _systemPreviewId;
+  ({Completer<String?> result, String id})? _pendingPhonePreview;
   final _events = StreamController<CompanionVoiceEvent>.broadcast();
   CompanionVoiceSettings _settings = const CompanionVoiceSettings();
   _OhosDeepSeekOut? _preview;
@@ -117,7 +118,16 @@ class OhosSpeechSpeaker implements CompanionSpeaker {
     final result = _result = Completer<String?>();
     final id = _systemPreviewId = 'system-preview-${++_previews}';
     lastError = null;
-    final ready = await _phone.ready(next);
+    _pendingPhonePreview = (result: result, id: id);
+    late final bool ready;
+    try {
+      ready = await _phone.ready(next);
+    } finally {
+      final pending = _pendingPhonePreview;
+      if (pending != null && identical(pending.result, result) && pending.id == id) {
+        _pendingPhonePreview = null;
+      }
+    }
     if (!identical(_result, result)) return result.future;
     if (ready) {
       _phone.speak(id, text);
@@ -125,6 +135,19 @@ class OhosSpeechSpeaker implements CompanionSpeaker {
       _heardPhone(CompanionVoiceEvent(CompanionVoiceEventType.error, id));
     }
     return result.future;
+  }
+
+  /// Read-aloud's OH DeepSeek creation point can retire a still-pending
+  /// system preview without stopping its prewarm or any other playback owner.
+  void retirePendingSystemPreview() {
+    final pending = _pendingPhonePreview;
+    if (pending == null || !identical(_result, pending.result) || _systemPreviewId != pending.id) {
+      return;
+    }
+    _pendingPhonePreview = null;
+    _systemPreviewId = null;
+    _result = null;
+    if (!pending.result.isCompleted) pending.result.complete('cancelled');
   }
 
   void _attachSystemOut(_OhosSystemOut out, {required bool call}) {
@@ -150,6 +173,7 @@ class OhosSpeechSpeaker implements CompanionSpeaker {
     _systemOut = null;
     _systemCall = false;
     systemOut?._retire();
+    _pendingPhonePreview = null;
     _systemPreviewId = null;
     _phone.stop();
     final out = _preview;
@@ -178,6 +202,10 @@ class OhosSpeechSpeaker implements CompanionSpeaker {
 // its held sentences after PCM or a new preview has taken playback.
 class _OhosSystemOut extends SpeakerOut {
   _OhosSystemOut(super.speaker, {super.onPlaying});
+
+  @override
+  SpeechOutEvent get _finishedEvent =>
+      _failed > 0 ? const SpeechOutFailed('voice') : const SpeechOutDone();
 
   void _retire() {
     if (_ended) return;

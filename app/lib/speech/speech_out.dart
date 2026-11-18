@@ -167,6 +167,18 @@ class SpeechChunker {
         if (!final_) break;
         cut = rest.length;
       }
+      // OH channels encode each piece separately: never split an input pair.
+      if (Platform.operatingSystem == 'ohos' && cut > 0) {
+        final last = rest.codeUnitAt(cut - 1);
+        final next = cut < rest.length ? rest.codeUnitAt(cut) : null;
+        if (last >= 0xd800 && last <= 0xdbff &&
+            (next != null ? next >= 0xdc00 && next <= 0xdfff : !final_)) {
+          cut--;
+          if (cut == 0) {
+            break;
+          }
+        }
+      }
       final piece = rest.substring(0, cut).trim();
       rest = rest.substring(cut);
       if (piece.isNotEmpty && RegExp(r'[\p{L}\p{N}]', unicode: true).hasMatch(piece)) {
@@ -540,6 +552,10 @@ class SpeakerOut implements SpeechOut {
   @override
   bool get ended => _ended;
 
+  SpeechOutEvent get _finishedEvent => _said > 0 && _failed == _said
+      ? const SpeechOutFailed('voice')
+      : const SpeechOutDone();
+
   @override
   void add(String text) {
     if (_finished || _ended) return;
@@ -553,7 +569,7 @@ class SpeakerOut implements SpeechOut {
     _finished = true;
     _say(_chunker.take(final_: true));
     if (_open.isEmpty && _held.isEmpty) {
-      _close(_said > 0 && _failed == _said ? const SpeechOutFailed('voice') : const SpeechOutDone());
+      _close(_finishedEvent);
     }
   }
 
@@ -594,7 +610,7 @@ class SpeakerOut implements SpeechOut {
           _levels?.cancel();
           onPlaying?.call(false);
           if (_finished) {
-            _close(_failed == _said ? const SpeechOutFailed('voice') : const SpeechOutDone());
+            _close(_finishedEvent);
           }
         }
       case CompanionVoiceEventType.range:

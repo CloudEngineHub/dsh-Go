@@ -264,7 +264,14 @@ class _OhosDeepSeekOut implements SpeechOut {
   String get heard {
     final parts = <String>[];
     for (final span in _spans) {
-      final count = span.heardBy(_played);
+      var count = span.heardBy(_played);
+      if (count > 0 && count < span.text.length) {
+        final high = span.text.codeUnitAt(count - 1);
+        final low = span.text.codeUnitAt(count);
+        if (high >= 0xd800 && high <= 0xdbff && low >= 0xdc00 && low <= 0xdfff) {
+          count--;
+        }
+      }
       if (count > 0) parts.add(span.text.substring(0, count));
       if (count < span.text.length) break;
     }

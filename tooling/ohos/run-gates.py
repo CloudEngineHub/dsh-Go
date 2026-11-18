@@ -1462,6 +1462,11 @@ def main():
           scope='Actual own-window geometry/diagnostics/EntryAbility with explicit Window/Flutter/clock boundaries; strict host types, not SDK or device')
     for widget_mode in ('plain', 'jitless'):
         g.run('companion-widget-' + widget_mode, lambda m=widget_mode: g.py(rt + 'companion-widget-linux.py', '--node', node(), '--typescript-prefix', p('typescript_prefix'), '--mode', m, '--out', o / ('companion-widget-' + m)), needs=('tools',), timeout=180, tests=[rt + 'companion-widget.test.mjs', rt + 'entry-ability-fixture.test.mjs'], scope='Actual companion widget ETS/Form data with independent OS processes and real Linux flock/atomic files; explicit FormKit boundary, no page/profile/device proof')
+    for video_save_mode in ('plain', 'jitless'):
+        g.run('video-save-input-' + video_save_mode, lambda m=video_save_mode: g.py(rt + 'video-save-input-linux.py', '--node', node(), '--node-headers', headers(), '--typescript-prefix', p('typescript_prefix'), '--cxx', p('cxx'), '--mode', m, '--out', o / ('video-save-input-' + m)),
+              needs=('native-tools',), timeout=210,
+              tests=[rt + name for name in ['video-save-empty.test.mjs', 'files-media-fixture.mjs', 'video-save-input-linux.py', 'user-file-access-addon.cc']],
+              scope='Actual FilesMediaPlugin/RuntimePaths and native safe FD opener; finite VIDEO confirmation cancellation, no device album acceptance or decoding')
     channels = ['app-links-channel', 'frame-rate-channel', 'keyboard-log', 'connectivity-channel', 'notify-channel', 'paste-channel', 'voice-stop-control', 'liveview-fallback', 'files-media-channel', 'usage-channel', 'launch-channel', 'launcher-icon-channel', 'shortcuts-channel', 'entry-ability-fixture']
     g.node_tests('ets-channels', [rt + n + '.test.mjs' for n in channels], needs=('native-opener-build',), extra=lambda: {'OHOS_USER_FILE_ADDON': str(o / 'user-file-access.node')}, timeout=240)
     def embedding_package(_):
@@ -1557,6 +1562,97 @@ def main():
     g.run('flutter-phone-folders-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/runtime/authorized_workspaces.dart'),
           cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
           tests=['app/lib/runtime/authorized_workspaces.dart'], scope='Actual Flutter analyzer for the changed data-layer file; no UI or SDK claim')
+    g.run('companion-effective-voice-ohos-dart', lambda: g.flutter('test', '--no-pub', '--reporter', 'json', '--concurrency=1',
+          '../runtime/tests/ohos/companion-effective-voice-data_test.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=[rt + 'companion-effective-voice-data_test.dart'],
+          scope='Actual Flutter production providers: OH effective companion voice is system without changing saved settings; unchanged Android/default controls; no Native/device or synthesis claim')
+    g.run('companion-effective-voice-ohos-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/speech/speech_settings.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/speech_settings.dart'],
+          scope='Actual Flutter analyzer for the changed app data provider only; external tests compile in their Flutter test group')
+    g.run('read-aloud-preflight-ohos-dart', lambda: g.py(rt + 'read-aloud-preflight-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--node', node(), '--typescript-prefix', p('typescript_prefix'), '--out', o / 'read-aloud-preflight-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'read-aloud-preflight-data_test.dart', rt + 'read-aloud-preflight-rpc.mjs',
+                 rt + 'read-aloud-preflight-linux.py', rt + 'system-tts-fixture.mjs', rt + 'entry-ability-fixture.mjs',
+                 rt + 'speech-upper/host-fixtures/platform_boundary.dart'],
+          scope='Actual Flutter/Riverpod ReadAloudController and OH system output ownership; private copies with two body-preserving OS import substitutions, actual ETS with finite HMS/embedding boundaries; default/Android data controls, no SDK/device or UI-pump claim')
+    g.run('read-aloud-preflight-ohos-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/speech/read_aloud.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/read_aloud.dart'],
+          scope='Actual Flutter analyzer for the changed app controller only; external tests compile in the dedicated private-copy Flutter group')
+    g.run('speech-chunk-boundary-ohos-dart', lambda: g.py(rt + 'speech-chunk-boundary-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--node', node(), '--typescript-prefix', p('typescript_prefix'), '--out', o / 'speech-chunk-boundary-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'speech-chunk-boundary-data_test.dart', rt + 'speech-chunk-boundary-rpc.mjs',
+                 rt + 'speech-chunk-boundary-linux.py', rt + 'read-aloud-preflight-data_test.dart',
+                 rt + 'system-tts-fixture.mjs', rt + 'entry-ability-fixture.mjs',
+                 rt + 'speech-upper/host-fixtures/platform_boundary.dart'],
+          scope='Actual OH System200 Flutter codec and ETS, OH DeepSeekOut300 finite synthesis/PCM boundaries, incremental surrogate-pair/old filtering controls; private two-import OS boundary; no UI, model, SDK/device or Android audio claim')
+    g.run('speech-chunk-boundary-ohos-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/speech/speech_out.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/speech_out.dart'],
+          scope='Actual Flutter analyzer for the changed app library and its parts; external tests compile in the dedicated Flutter group')
+    g.run('speech-partial-error-ohos-dart', lambda: g.py(rt + 'speech-partial-error-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--node', node(), '--typescript-prefix', p('typescript_prefix'), '--out', o / 'speech-partial-error-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'speech-partial-error-data_test.dart', rt + 'speech-partial-error-rpc.mjs',
+                 rt + 'speech-partial-error-linux.py', rt + 'read-aloud-preflight-data_test.dart',
+                 rt + 'system-tts-fixture.mjs', rt + 'entry-ability-fixture.mjs',
+                 rt + 'speech-upper/host-fixtures/platform_boundary.dart', 'app/test/speech/speech_fakes.dart'],
+          scope='Actual ReadAloud/OH system factory/VoiceCall natural-terminal errors through Flutter codec and ETS; finite SDK and existing capture/cloud/conversation boundaries, unchanged cancellation and Android/default data controls; no UI or device claim')
+    g.run('speech-partial-error-ohos-analyze', lambda: g.flutter('analyze', '--no-pub',
+          'lib/speech/speech_out.dart', 'lib/speech/ohos_speech_preview.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/speech_out.dart', 'app/lib/speech/ohos_speech_preview.dart'],
+          scope='Actual Flutter analyzer for the two changed app-library files only; external targets compile in their dedicated Flutter group')
+    g.run('speech-heard-prefix-ohos-dart', lambda: g.py(rt + 'heard-prefix-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--out', o / 'speech-heard-prefix-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'heard-prefix-data_test.dart', rt + 'heard-prefix-fixture.dart',
+                 rt + 'heard-prefix-linux.py', rt + 'speech-upper/host-fixtures/platform_boundary.dart'],
+          scope='Actual Flutter OH heard scalar-prefix boundaries and VoiceCall cut-in; finite synthesis/PCM/recognition/conversation seams, unchanged Android/default controls; app-library analysis uses the existing speech-chunk-boundary-ohos-analyze group; no ETS/SDK/device or acoustic-progress claim')
+    g.run('call-cut-note-ohos-dart', lambda: g.py(rt + 'call-cut-note-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--out', o / 'call-cut-note-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'call-cut-note-data_test.dart', rt + 'call-cut-note-fixture.dart',
+                 rt + 'call-cut-note-linux.py', rt + 'speech-upper/host-fixtures/platform_boundary.dart',
+                 'app/lib/state/app_notes.dart', 'app/lib/l10n/l10n.dart'],
+          scope='Actual Flutter VoiceCall last30 suffix through production appNote/l10n and send argument; finite synthesis/recognition/PCM/conversation boundaries, explicit OH import selection and unchanged Android/default controls; no UI/ETS/SDK/device or acoustic-progress claim')
+    g.run('call-cut-note-ohos-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/speech/call/voice_call.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/call/voice_call.dart'],
+          scope='Actual Flutter analyzer for the changed app controller with original imports; external target tests compile in the dedicated Flutter group')
+    g.run('workspace-queued-read-ohos-dart', lambda: g.py(rt + 'workspace-read-retirement-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--out', o / 'workspace-queued-read-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=300,
+          tests=[rt + 'workspace-read-retirement-data_test.dart', rt + 'workspace-read-retirement-fixture.dart',
+                 rt + 'workspace-read-retirement-linux.py', rt + 'speech-upper/host-fixtures/platform_boundary.dart'],
+          scope='Actual Flutter Riverpod directory owner and ClientWorkspaceSource/RPC/mux through a finite carrier; OH expired/live/keep-alive/public-refresh and unchanged Android/default controls; declared OS import boundary, no UI/Native/filesystem/device or remote-cancel-completion claim')
+    g.run('workspace-queued-read-ohos-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/state/workspace_state.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/state/workspace_state.dart'],
+          scope='Actual Flutter analyzer for the changed app data file with original imports; external OH targets compile in their dedicated Flutter group')
+    g.run('read-aloud-pending-preview-ohos-dart', lambda: g.py(rt + 'read-aloud-pending-preview-linux.py',
+          '--source', s, '--prepared-flutter-source', g.flutter_source, '--flutter', p('flutter'),
+          '--node', node(), '--typescript-prefix', p('typescript_prefix'), '--out', o / 'read-aloud-pending-preview-ohos-dart'),
+          needs=('tools', 'flutter-input-identity'), env=g.flutter_env, timeout=360,
+          tests=[rt + 'read-aloud-pending-preview-data_test.dart', rt + 'read-aloud-pending-preview-rpc.mjs',
+                 rt + 'read-aloud-pending-preview-fixture.mjs', rt + 'read-aloud-pending-preview-linux.py',
+                 rt + 'entry-ability-fixture.mjs', rt + 'speech-upper/host-fixtures/platform_boundary.dart'],
+          scope='Actual OH ReadAloud creation retires only pending shared system preview; real providers/codec/ETS with finite HTTP, whole PCM Backend and HMS boundaries, three private import substitutions, unchanged default/Android controls; no UI/phone or physical-release claim')
+    g.run('read-aloud-pending-preview-ohos-analyze', lambda: g.flutter('analyze', '--no-pub',
+          'lib/speech/read_aloud.dart', 'lib/speech/speech_out.dart'),
+          cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
+          tests=['app/lib/speech/read_aloud.dart', 'app/lib/speech/ohos_speech_preview.dart', 'app/lib/speech/speech_out.dart'],
+          scope='Actual Flutter analyzer with original app imports for the controller and parent speech library, including the changed part; external targets compile in their dedicated Flutter group')
     g.run('speech-upper-host', lambda: g.py(rt + 'speech-upper.py', '--source', s, '--dart', p('dart'),
           '--node', node(), '--typescript-prefix', p('typescript_prefix'),
           '--deps-config', g.flutter_source / 'app/.dart_tool/package_config.json',
@@ -1585,7 +1681,7 @@ def main():
     g.run('companion-tts-preview-dart-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/companion/companion_voice.dart'),
           cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
           tests=['app/lib/companion/companion_voice.dart', rt + 'companion-external-data_test.dart', rt + 'system-tts-preview-data_test.dart'],
-          scope='Actual Flutter analyzer for OH companion preflight/cancellation data and finite consumer tests; no UI or Native edits')
+          scope='Actual Flutter analyzer for the app companion data file; external consumer tests remain declared and compile in the Flutter test group; no UI or Native edits')
     g.run('call-route-dart', lambda: g.flutter('test', '--no-pub', '--reporter', 'json', '--concurrency=1',
           '../runtime/tests/ohos/audio-route-data_test.dart', '../runtime/tests/ohos/call-start-mute-data_test.dart',
           '../runtime/tests/ohos/call-start-mute-integration_test.dart', '../runtime/tests/ohos/call-start-pause-integration_test.dart',
@@ -1621,7 +1717,7 @@ def main():
     g.run('flutter-media-video-poster-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/media/video.dart'),
           cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
           tests=['app/lib/media/video.dart', rt + 'media-video-poster-data_test.dart'],
-          scope='Actual Flutter analyzer for the OH poster cache data file and its finite consumer tests; no UI or Native edits')
+          scope='Actual Flutter analyzer for the app poster cache data file; external consumer tests remain declared and compile in the Flutter test group; no UI or Native edits')
     flutter_tests = ['test/secrets', 'test/ohos/attachment_files_test.dart', 'test/runtime/phone_callback_bridge_test.dart', 'test/runtime/runtime_recovery_test.dart', 'test/runtime/ohos_install_record_test.dart', 'test/usage/ohos_device_contract_test.dart',
                      'test/safe_mode/safe_mode_logic_test.dart', 'test/state/engine_control_test.dart', 'test/runtime/runtime_controller_test.dart',
                      'test/plugins/ohos_replace_cancel_test.dart', 'test/remote/pairing_system_scanner_test.dart',
@@ -1648,11 +1744,11 @@ def main():
           cwd=g.flutter_source / 'app', env=lambda: {**g.flutter_env, 'OHOS_CANCEL_OWNER_WIRE': str(o / 'diagnostic-cancel-wire.json')},
           needs=('flutter-input-identity', 'diagnostic-cancel-wire'), timeout=300,
           tests=[rt + 'automatic-diagnostics-cancel-state_test.dart'],
-          scope='Actual OH provider/sender and DshClient loopback HTTP cancellation ownership; same-epoch new check and Android/default compatibility, zero model requests')
+          scope='Actual OH provider/sender and DshClient loopback HTTP cancellation ownership; same-null-epoch storage recovery and Android/default compatibility, zero model requests')
     g.run('flutter-diagnostic-cancel-state-analyze', lambda: g.flutter('analyze', '--no-pub', 'lib/diagnostics/automatic_diagnostics.dart'),
           cwd=g.flutter_source / 'app', env=g.flutter_env, needs=('flutter-input-identity',), timeout=180,
           tests=['app/lib/diagnostics/automatic_diagnostics.dart', rt + 'automatic-diagnostics-cancel-state_test.dart'],
-          scope='Real Flutter analyzer for the OH cancellation state guard and actual-provider finite tests')
+          scope='Real Flutter analyzer for the app OH cancellation state guard; external provider tests remain declared and compile in the Flutter test group')
     g.run('flutter-diagnostic-evidence', lambda: g.flutter('test', '--no-pub', '--reporter', 'json', '--concurrency=1', '../runtime/tests/ohos/diagnostic-evidence-data_test.dart',
           'test/diagnostics/automatic_diagnostics_test.dart', 'test/diagnostics/diagnostics_sections_test.dart',
           'test/diagnostics/automatic_diagnostics_provider_test.dart', 'test/diagnostics/voice_diagnostics_test.dart'),
